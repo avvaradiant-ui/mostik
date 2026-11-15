@@ -552,7 +552,7 @@ function userForm(u) {
 }
 
 function showCreds(name, email, password) {
-  const text = `Здравствуйте, ${name.split(/\s+/)[1] || name}!\nДля вас открыт доступ в Мостик – портал цифр Айсберг 8.\n\nАдрес: https://most.iceberg8.ru\nЛогин: ${email}\nВременный пароль: ${password}\n\nПожалуйста, после первого входа смените пароль (меню с вашим именем справа вверху). Спасибо!`;
+  const text = `Здравствуйте, ${name.split(/\s+/)[1] || name}!\nДля вас открыт доступ в «Капитанский мостик» – портал цифр Айсберг 8.\n\nАдрес: https://most.iceberg8.ru\nЛогин: ${email}\nВременный пароль: ${password}\n\nПожалуйста, после первого входа смените пароль (меню с вашим именем справа вверху). Спасибо!`;
   openModal(`<h2>Пользователь создан</h2><p class="hint">Передайте сотруднику лично или в личные сообщения:</p><div class="creds" id="credsText">${esc(text)}</div>
     <div class="modal-actions"><button class="btn" id="copyCreds">Скопировать</button><button class="btn primary" data-close>Готово</button></div>`);
   $("copyCreds").onclick = async () => { try { await navigator.clipboard.writeText(text); toast("Скопировано"); } catch { toast("Выделите текст и скопируйте вручную"); } };
