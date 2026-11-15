@@ -114,6 +114,7 @@ async function enter() {
     return;
   }
   S.me = me.data; S.meta = meta.data || {};
+  if (S.me.dash) S.tab = "dash";
   $("login").classList.add("hidden"); $("app").classList.remove("hidden");
   $("userBtn").textContent = shortName(S.me.full_name) + " ▾";
   renderTabs(); renderPeriods(); renderFresh();
@@ -143,7 +144,9 @@ $("pwBtn").onclick = () => {
 
 /* ---------- вкладки ---------- */
 function tabList() {
-  const t = [["overview", "Обзор"]];
+  const t = [];
+  if (S.me.dash) t.push(["dash", S.me.role === "admin" ? "Дашборд компании" : "Дашборд"]);
+  t.push(["overview", S.me.dash ? "Продажи" : "Обзор"]);
   if (S.me.show_people) t.push(["seg", "Ответственные"], ["mgr", "Менеджеры"]);
   if (S.me.show_clients) t.push(["cli", "Клиенты"]);
   t.push(["cat", S.me.only_rnd ? "Новинки RND" : "Товары"]);
@@ -153,7 +156,8 @@ function tabList() {
 function renderTabs() {
   $("tabs").innerHTML = tabList().map(([k, n]) => `<button data-tab="${k}" class="${S.tab === k ? "on" : ""}">${n}</button>`).join("");
   $("tabs").querySelectorAll("button").forEach((b) => (b.onclick = () => { S.tab = b.dataset.tab; renderTabs(); render(); }));
-  const dataTab = S.tab !== "admin";
+  const dataTab = S.tab !== "admin" && S.tab !== "dash";
+  document.body.classList.toggle("dash-mode", S.tab === "dash");
   $("toolbar").classList.toggle("hidden", !dataTab);
   $("chips").classList.toggle("hidden", !dataTab);
 }
@@ -286,6 +290,7 @@ function render() {
   destroyCharts();
   renderChips();
   if (S.tab === "admin") return renderAdmin();
+  if (S.tab === "dash") return renderDash();
   if (S.tab === "overview") return renderOverview();
   return renderDim(S.tab);
 }
@@ -441,6 +446,25 @@ function drawTable(el, arr, cols, sortKey, onClick) {
     st.asc = st.k === th.dataset.k ? !st.asc : th.dataset.k === "key"; st.k = th.dataset.k; drawTable(el, arr, cols, sortKey, onClick);
   }));
   el.querySelectorAll("tr.click").forEach((tr) => (tr.onclick = () => onClick(tr.dataset.v)));
+}
+
+/* ---------- дашборд, собранный Маком (тот же, что в Claude), выдаётся по правам ---------- */
+let DASH = null;
+async function renderDash() {
+  $("view").innerHTML = `<div class="empty">Загружаю дашборд…</div>`;
+  if (!DASH) {
+    const { data, error } = await sb.functions.invoke("most-dash", { body: {} });
+    if (error || data?.error) {
+      const msg = await fnError(error, data);
+      $("view").innerHTML = `<div class="card empty">${esc(msg)}.<br>Пока можно смотреть вкладку «Продажи».</div>`;
+      return;
+    }
+    DASH = data;
+  }
+  if (S.tab !== "dash") return;
+  const upd = DASH.updated ? new Date(DASH.updated).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }) : "";
+  $("view").innerHTML = `<p class="hint dash-note">Обновлён ${esc(upd)} · собирается Маком каждое утро из 1С</p><iframe id="dashFrame" class="dash-frame" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" title="Дашборд компании"></iframe>`;
+  $("dashFrame").srcdoc = DASH.html;
 }
 
 /* ---------- админка ---------- */

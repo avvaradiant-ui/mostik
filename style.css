@@ -145,3 +145,9 @@ td .bar { height: 6px; background: var(--b3); border-radius: 3px; margin-top: 4p
   .kpi .v { font-size: 22px; }
   .fresh { margin-left: 0; width: 100%; }
 }
+
+/* вкладка «Дашборд»: собранный Маком дашборд во всю высоту */
+body.dash-mode main { max-width: none; padding: 0; }
+.dash-note { margin: 6px 24px; }
+.dash-frame { display: block; width: 100%; height: calc(100vh - 92px); border: 0; background: #fff; }
+@media (max-width: 760px) { .dash-frame { height: calc(100vh - 120px); } .dash-note { margin: 6px 14px; } }
