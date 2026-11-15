@@ -502,15 +502,16 @@ function rndGroups() {
   const g = new Map();
   for (const r of RND.rows) {
     let x = g.get(r.title);
-    if (!x) g.set(r.title, (x = { title: r.title, rows: [], codes: new Set(), first: r.first, since: r.since, rev: 0, kg: 0, mg: 0, hasMg: false, cur: 0, prev: 0, months: new Map(), maxRepeat: 0 }));
+    if (!x) g.set(r.title, (x = { title: r.title, rows: [], codes: new Set(), first: r.first, since: r.since, rev: 0, kg: 0, qty: 0, allPcs: true, mg: 0, hasMg: false, cur: 0, prev: 0, months: new Map(), maxRepeat: 0 }));
     x.rows.push(r); x.codes.add(r.code + " " + r.name);
     if (r.first && (!x.first || r.first < x.first)) x.first = r.first;
-    x.rev += +r.revenue || 0; x.kg += +r.kg || 0;
+    x.rev += +r.revenue || 0; x.kg += +r.kg || 0; x.qty += +r.qty || 0;
+    if (r.unit !== "шт") x.allPcs = false;
     if (r.margin != null) { x.mg += +r.margin; x.hasMg = true; }
     if (r.month === curMonth()) x.cur += +r.revenue || 0;
     if (r.month === prevMonth()) x.prev += +r.revenue || 0;
-    const m = x.months.get(r.month) || { rev: 0, kg: 0, mg: 0, clients: 0, repeat: 0, seti: 0, opt: 0, horeca: 0, retail: 0 };
-    m.rev += +r.revenue || 0; m.kg += +r.kg || 0; m.mg += +r.margin || 0; m.clients += r.clients || 0; m.repeat += r.repeat_cum || 0;
+    const m = x.months.get(r.month) || { rev: 0, kg: 0, qty: 0, mg: 0, clients: 0, repeat: 0, seti: 0, opt: 0, horeca: 0, retail: 0 };
+    m.rev += +r.revenue || 0; m.kg += +r.kg || 0; m.qty += +r.qty || 0; m.mg += +r.margin || 0; m.clients += r.clients || 0; m.repeat += r.repeat_cum || 0;
     m.seti += +r.seti || 0; m.opt += +r.opt || 0; m.horeca += +r.horeca || 0; m.retail += +r.retail || 0;
     x.months.set(r.month, m);
     x.maxRepeat = Math.max(x.maxRepeat, r.repeat_cum || 0);
@@ -518,28 +519,30 @@ function rndGroups() {
   for (const x of g.values()) x.days = x.first ? daysBetween(x.first, iso(new Date())) : null;
   return [...g.values()];
 }
+/* Штучный товар (консервы, креветка на шпажке) – в штуках, весовой – в кг */
+const vol = (x, o) => (x.allPcs ? nf0.format(o.qty) + " шт" : nf0.format(o.kg) + " кг");
 function rndClients(title) { return (RND.clients || []).filter((c) => c.title === title); }
 
 function rndList() {
   const arr = rndGroups().sort((a, b) => b.rev - a.rev);
-  const tot = arr.reduce((s, x) => ({ rev: s.rev + x.rev, cur: s.cur + x.cur, prev: s.prev + x.prev, kg: s.kg + x.kg }), { rev: 0, cur: 0, prev: 0, kg: 0 });
+  const tot = arr.reduce((s, x) => ({ rev: s.rev + x.rev, cur: s.cur + x.cur, prev: s.prev + x.prev, kg: s.kg + (x.allPcs ? 0 : x.kg), pcs: s.pcs + (x.allPcs ? x.qty : 0) }), { rev: 0, cur: 0, prev: 0, kg: 0, pcs: 0 });
   const dc = delta(tot.cur, tot.prev);
   const showMg = S.me.show_margin;
   const cliCount = (t) => new Set(rndClients(t).map((c) => c.client)).size;
   const kpis = [
     `<div class="card kpi"><div class="l">Новинок в работе</div><div class="v">${arr.length}</div><div class="d">из реестра RND</div></div>`,
-    `<div class="card kpi"><div class="l">Выручка с запуска</div><div class="v">${money(tot.rev)}</div><div class="d">${nf0.format(tot.kg)} кг</div></div>`,
+    `<div class="card kpi"><div class="l">Выручка с запуска</div><div class="v">${money(tot.rev)}</div><div class="d">${[tot.kg ? nf0.format(tot.kg) + " кг" : "", tot.pcs ? nf0.format(tot.pcs) + " шт" : ""].filter(Boolean).join(" · ")}</div></div>`,
     `<div class="card kpi"><div class="l">Этот месяц</div><div class="v">${money(tot.cur)}</div><div class="d">к прошлому месяцу целиком: ${tot.prev ? (dc.v >= 0 ? "+" : "") + nf0.format(dc.v) + "%" : "нет данных"}</div></div>`,
   ];
   $("view").innerHTML = `
     <div class="section-title"><h2>Новинки RND</h2><span class="note">Продажи своих новинок с первой продажи, по месяцам. Нажмите на новинку – детали.</span></div>
     <div class="grid kpis">${kpis.join("")}</div>
     <div class="card tbl-wrap" style="margin-top:16px"><table><thead><tr>
-      <th>Новинка</th><th class="num">Первая продажа</th><th class="num">Дней в продаже</th><th class="num">Выручка с запуска</th><th class="num">Кг</th>
+      <th>Новинка</th><th class="num">Первая продажа</th><th class="num">Дней в продаже</th><th class="num">Выручка с запуска</th><th class="num">Объём</th>
       <th class="num">Этот месяц</th><th class="num">Прошлый месяц</th>${showMg ? `<th class="num">Маржа %</th>` : ""}
       ${RND.clients ? `<th class="num">Клиентов</th>` : ""}<th class="num">Повторные клиенты</th></tr></thead><tbody>
       ${arr.map((x) => `<tr class="click" data-v="${esc(x.title)}"><td><b>${esc(x.title)}</b>${x.days != null && x.days <= 90 ? ` <span class="tag">первые 90 дней</span>` : ""}</td>
-        <td class="num">${ruDate(x.first)}</td><td class="num">${x.days ?? "–"}</td><td class="num">${rub(x.rev)}</td><td class="num">${nf0.format(x.kg)}</td>
+        <td class="num">${ruDate(x.first)}</td><td class="num">${x.days ?? "–"}</td><td class="num">${rub(x.rev)}</td><td class="num">${vol(x, x)}</td>
         <td class="num">${rub(x.cur)}</td><td class="num">${rub(x.prev)}</td>
         ${showMg ? `<td class="num">${x.hasMg && x.rev ? pct((x.mg / x.rev) * 100) : "–"}</td>` : ""}
         ${RND.clients ? `<td class="num">${cliCount(x.title)}</td>` : ""}<td class="num">${x.maxRepeat}</td></tr>`).join("")}
@@ -564,7 +567,7 @@ function rndDetail(title) {
     <button class="btn small" id="rndBack">← Все новинки</button>
     <div class="section-title"><h2>${esc(title)}</h2><span class="note">Первая продажа ${ruDate(x.first)} · ${x.days ?? "–"} дн. в продаже</span></div>
     <div class="grid kpis">
-      <div class="card kpi"><div class="l">Выручка с запуска</div><div class="v">${money(x.rev)}</div><div class="d">${nf0.format(x.kg)} кг</div></div>
+      <div class="card kpi"><div class="l">Выручка с запуска</div><div class="v">${money(x.rev)}</div><div class="d">${vol(x, x)}</div></div>
       <div class="card kpi"><div class="l">Этот месяц</div><div class="v">${money(x.cur)}</div><div class="d">прошлый месяц: ${money(x.prev)}</div></div>
       ${showMg ? `<div class="card kpi"><div class="l">Маржа</div><div class="v">${x.hasMg && x.rev ? pct((x.mg / x.rev) * 100) : "–"}</div><div class="d">${rub(x.mg)}</div></div>` : ""}
       <div class="card kpi"><div class="l">Повторные клиенты</div><div class="v">${x.maxRepeat}</div><div class="d">купили 2+ раз</div></div>
@@ -578,13 +581,13 @@ function rndDetail(title) {
         ${[...cities.entries()].sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${rub(v)}</td><td class="num">${share(v)}</td></tr>`).join("") || `<tr><td class="empty">Нет данных</td></tr>`}
       </tbody></table></div>
     </div>
-    <div class="card tbl-wrap" style="margin-top:16px"><h3>По месяцам</h3><table><thead><tr><th>Месяц</th><th class="num">Выручка</th><th class="num">Кг</th>
+    <div class="card tbl-wrap" style="margin-top:16px"><h3>По месяцам</h3><table><thead><tr><th>Месяц</th><th class="num">Выручка</th><th class="num">Объём</th>
       ${showMg ? `<th class="num">Маржа %</th>` : ""}<th class="num">Клиентов</th></tr></thead><tbody>
-      ${months.slice().reverse().map(([m, v]) => `<tr><td>${monthName(m)}${m === curMonth() ? ` <span class="tag">идёт</span>` : ""}</td><td class="num">${rub(v.rev)}</td><td class="num">${nf0.format(v.kg)}</td>
+      ${months.slice().reverse().map(([m, v]) => `<tr><td>${monthName(m)}${m === curMonth() ? ` <span class="tag">идёт</span>` : ""}</td><td class="num">${rub(v.rev)}</td><td class="num">${vol(x, v)}</td>
         ${showMg ? `<td class="num">${v.rev ? pct((v.mg / v.rev) * 100) : "–"}</td>` : ""}<td class="num">${v.clients}</td></tr>`).join("")}
     </tbody></table></div>
-    ${RND.clients ? `<div class="card tbl-wrap" style="margin-top:16px"><h3>Кто покупает</h3><table><thead><tr><th>Клиент</th><th class="num">Выручка</th><th class="num">Кг</th><th class="num">Покупок</th><th class="num">Последняя</th></tr></thead><tbody>
-      ${clients.map((c) => `<tr><td>${esc(c.client)}${c.docs >= 2 ? ` <span class="tag">повторно</span>` : ""}</td><td class="num">${rub(c.revenue)}</td><td class="num">${nf0.format(c.kg)}</td><td class="num">${c.docs}</td><td class="num">${ruDate(c.last_date)}</td></tr>`).join("") || `<tr><td class="empty" colspan="5">Нет покупок</td></tr>`}
+    ${RND.clients ? `<div class="card tbl-wrap" style="margin-top:16px"><h3>Кто покупает</h3><table><thead><tr><th>Клиент</th><th class="num">Выручка</th><th class="num">Объём</th><th class="num">Покупок</th><th class="num">Последняя</th></tr></thead><tbody>
+      ${clients.map((c) => `<tr><td>${esc(c.client)}${c.docs >= 2 ? ` <span class="tag">повторно</span>` : ""}</td><td class="num">${rub(c.revenue)}</td><td class="num">${vol(x, c)}</td><td class="num">${c.docs}</td><td class="num">${ruDate(c.last_date)}</td></tr>`).join("") || `<tr><td class="empty" colspan="5">Нет покупок</td></tr>`}
     </tbody></table></div>` : ""}
     <p class="hint">Позиции 1С: ${[...x.codes].map(esc).join("; ")}</p>`;
   $("rndBack").onclick = () => { RND_SEL = null; renderRnd(); };
