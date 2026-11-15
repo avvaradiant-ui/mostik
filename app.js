@@ -124,6 +124,8 @@ const shortName = (n) => { const p = String(n || "").split(/\s+/); return p.leng
 
 $("userBtn").onclick = () => $("userMenu").classList.toggle("hidden");
 document.addEventListener("click", (e) => { if (!e.target.closest(".user")) $("userMenu").classList.add("hidden"); });
+$("dashBtn").onclick = () => { $("userMenu").classList.add("hidden"); S.tab = "dash"; renderTabs(); render(); };
+$("adminBtn").onclick = () => { $("userMenu").classList.add("hidden"); S.tab = "admin"; renderTabs(); render(); };
 $("logoutBtn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
 $("pwBtn").onclick = () => {
   $("userMenu").classList.add("hidden");
@@ -153,8 +155,16 @@ function tabList() {
   if (S.me.role === "admin") t.push(["admin", "Админка"]);
   return t;
 }
+/* У кого есть дашборд (админ, РОП), вкладки сверху не дублируют вкладки дашборда:
+   сверху пусто, «Админка» – в меню под именем. У менеджеров и маркетинга дашборда
+   нет, у них остаются вкладки Мостика. */
 function renderTabs() {
-  $("tabs").innerHTML = tabList().map(([k, n]) => `<button data-tab="${k}" class="${S.tab === k ? "on" : ""}">${n}</button>`).join("");
+  const dashUser = !!S.me.dash;
+  $("dashBtn").classList.toggle("hidden", !dashUser || S.tab === "dash");
+  $("adminBtn").classList.toggle("hidden", !(dashUser && S.me.role === "admin") || S.tab === "admin");
+  $("tabs").classList.toggle("hidden", dashUser);
+  if (dashUser) { const t = S.tab; if (t !== "dash" && t !== "admin") S.tab = "dash"; }
+  $("tabs").innerHTML = (dashUser ? [] : tabList()).map(([k, n]) => `<button data-tab="${k}" class="${S.tab === k ? "on" : ""}">${n}</button>`).join("");
   $("tabs").querySelectorAll("button").forEach((b) => (b.onclick = () => { S.tab = b.dataset.tab; renderTabs(); render(); }));
   const dataTab = S.tab !== "admin" && S.tab !== "dash";
   document.body.classList.toggle("dash-mode", S.tab === "dash");
@@ -360,14 +370,14 @@ function drawMainChart(rows, prows) {
     data: {
       labels,
       datasets: [
-        { type: "bar", label: "Текущий период", data: cur, backgroundColor: "#1e7bc6", borderRadius: 4, order: 2 },
-        { type: "line", label: "Предыдущий период", data: prev, borderColor: "#7fb8e6", backgroundColor: "#7fb8e6", borderDash: [5, 4], pointRadius: 0, tension: 0.25, order: 1 },
+        { type: "bar", label: "Текущий период", data: cur, backgroundColor: "#3278BE", borderRadius: 0, order: 2 },
+        { type: "line", label: "Предыдущий период", data: prev, borderColor: "#1A1A1A", backgroundColor: "#1A1A1A", borderDash: [5, 4], pointRadius: 0, tension: 0.25, order: 1 },
       ],
     },
     options: {
       maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
       plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${rub(c.raw)}` } } },
-      scales: { y: { ticks: { callback: (v) => money(v) }, grid: { color: "#eef3f8" } }, x: { grid: { display: false } } },
+      scales: { y: { ticks: { callback: (v) => money(v) }, grid: { color: "#CCDDEF" } }, x: { grid: { display: false } } },
     },
   }));
 }

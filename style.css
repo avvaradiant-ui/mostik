@@ -1,16 +1,18 @@
 :root {
-  --ink: #0d2236;
-  --muted: #5f7489;
-  --line: #dde7f1;
-  --bg: #f3f7fb;
-  --card: #ffffff;
-  --b1: #0a4d8c;   /* глубокий синий */
-  --b2: #1e7bc6;   /* основной */
-  --b3: #7fb8e6;   /* светлый лёд */
-  --b4: #e6f1fb;
-  --up: #1a8a5a;
-  --down: #c2412d;
-  --radius: 12px;
+  /* бренд-бук «Айсберг 8» v1.4: синий, три голубых, текст #1A1A1A */
+  --ink: #1A1A1A;
+  --muted: #1A1A1A;
+  --line: #CCDDEF;
+  --bg: #FFFFFF;
+  --card: #FFFFFF;
+  --b1: #3278BE;
+  --b2: #3278BE;
+  --b3: #99BCDF;
+  --b4: #CCDDEF;
+  --sky1: #659ACE;
+  --up: #3278BE;
+  --down: #B3261E;
+  --radius: 0;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink);
@@ -151,3 +153,52 @@ body.dash-mode main { max-width: none; padding: 0; }
 .dash-note { margin: 6px 24px; }
 .dash-frame { display: block; width: 100%; height: calc(100vh - 92px); border: 0; background: #fff; }
 @media (max-width: 760px) { .dash-frame { height: calc(100vh - 120px); } .dash-note { margin: 6px 14px; } }
+
+/* ===== Фирменный стиль: бренд-бук v1.4 (PT Sans, прямые углы, без теней и градиентов) ===== */
+html, body { font: 16px/1.4 "PT Sans", Arial, sans-serif; background: #FFFFFF; color: #1A1A1A; }
+*:not(.spin) { border-radius: 0 !important; box-shadow: none !important; }
+h1, h2, h3 { font-family: "PT Sans", Arial, sans-serif; font-weight: 700; }
+.brand { gap: 12px; font-size: 17px; color: #1A1A1A; font-weight: 700; }
+.brand .logo { height: 22px; width: auto; display: block; }
+.brand-name { padding-left: 12px; border-left: 1px solid #CCDDEF; }
+.brand.big { font-size: 30px; color: #3278BE; justify-content: flex-start; margin-top: 8px; }
+.logo-big { height: 30px; width: auto; display: block; }
+#login { background: #CCDDEF; }
+.login-card { border: 1px solid #99BCDF; border-top: 4px solid #3278BE; }
+.tagline { text-align: left; color: #1A1A1A; }
+label { color: #1A1A1A; }
+.muted-link { color: #3278BE; text-align: left; }
+.top { border-bottom: 2px solid #3278BE; }
+#tabs button { color: #1A1A1A; border-radius: 0; }
+#tabs button.on { background: #3278BE; color: #FFFFFF; font-weight: 700; }
+#tabs button:hover:not(.on) { background: #CCDDEF; color: #1A1A1A; }
+.btn { border-color: #3278BE; color: #3278BE; font-weight: 700; }
+.btn:hover { background: #CCDDEF; border-color: #3278BE; }
+.btn.primary { background: #3278BE; border-color: #3278BE; color: #FFFFFF; }
+.btn.primary:hover { background: #659ACE; border-color: #659ACE; }
+.btn.ghost { color: #1A1A1A; border-color: transparent; }
+.menu { border: 1px solid #3278BE; }
+.menu button:hover { background: #CCDDEF; }
+.periods button { border-color: #3278BE; color: #3278BE; }
+.periods button.on { background: #3278BE; color: #FFFFFF; }
+.chip { background: #CCDDEF; color: #1A1A1A; }
+.card { border: 1px solid #CCDDEF; }
+.card h3, .kpi .l { color: #3278BE; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.kpi { border-top: 3px solid #3278BE; }
+.kpi .v { color: #1A1A1A; }
+th { background: #CCDDEF; color: #1A1A1A; font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+table { font-family: "PT Sans Narrow", "PT Sans", Arial, sans-serif; font-size: 15px; }
+td { border-bottom: 1px solid #CCDDEF; }
+td .bar { background: #3278BE; }
+.tag { background: #3278BE; color: #FFFFFF; font-weight: 700; }
+.tag.off { background: #FFFFFF; color: #B3261E; border: 1px solid #B3261E; }
+.modal { background: rgba(26,26,26,.35); }
+.modal-card { border-top: 4px solid #3278BE; }
+.toast { background: #3278BE; }
+.loader { background: rgba(255,255,255,.6); }
+.spin { border-color: #CCDDEF; border-top-color: #3278BE; }
+a { color: #3278BE; text-decoration: none; } a:hover { text-decoration: underline; } a:visited { color: #3278BE; }
+/* у кого дашборд – вкладок сверху нет, шапка тоньше, дашборд выше */
+body.dash-mode .dash-frame { height: calc(100vh - 78px); }
+@media (max-width: 760px) { .brand-name { display: none; } body.dash-mode .dash-frame { height: calc(100vh - 92px); } }
+.user { margin-left: auto; }
