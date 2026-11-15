@@ -145,7 +145,8 @@ $("pwBtn").onclick = () => {
 };
 
 /* ---------- вкладки ---------- */
-const canRnd = () => S.me.role === "admin" || S.me.only_rnd;
+/* Новинки RND видят админы, РОП (в пределах своих ответственных) и маркетинг; маржа – только владельцу */
+const canRnd = () => S.me.role === "admin" || S.me.role === "rop" || S.me.only_rnd;
 function tabList() {
   if (S.me.only_rnd) return [["rnd", "Новинки RND"], ["overview", "Продажи по дням"]];
   const t = [];
@@ -527,7 +528,7 @@ function rndList() {
   const arr = rndGroups().sort((a, b) => b.rev - a.rev);
   const tot = arr.reduce((s, x) => ({ rev: s.rev + x.rev, cur: s.cur + x.cur, prev: s.prev + x.prev, kg: s.kg + (x.allPcs ? 0 : x.kg), pcs: s.pcs + (x.allPcs ? x.qty : 0) }), { rev: 0, cur: 0, prev: 0, kg: 0, pcs: 0 });
   const dc = delta(tot.cur, tot.prev);
-  const showMg = S.me.show_margin;
+  const showMg = !!RND.margin;
   const cliCount = (t) => new Set(rndClients(t).map((c) => c.client)).size;
   const kpis = [
     `<div class="card kpi"><div class="l">Новинок в работе</div><div class="v">${arr.length}</div><div class="d">из реестра RND</div></div>`,
@@ -557,7 +558,7 @@ function rndDetail(title) {
   const x = rndGroups().find((g) => g.title === title);
   if (!x) { RND_SEL = null; return rndList(); }
   const months = [...x.months.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
-  const showMg = S.me.show_margin;
+  const showMg = !!RND.margin;
   const ch = months.reduce((s, [, m]) => ({ seti: s.seti + m.seti, opt: s.opt + m.opt, horeca: s.horeca + m.horeca, retail: s.retail + m.retail }), { seti: 0, opt: 0, horeca: 0, retail: 0 });
   const cities = new Map();
   for (const r of x.rows) for (const [c, v] of Object.entries(r.cities || {})) cities.set(c, (cities.get(c) || 0) + (v["выручка"] || 0));
