@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мостик – Айсберг 8</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 27 26H5z' fill='%231E7BC6'/%3E%3Cpath d='M16 3 21 14 16 26 11 14z' fill='%23fff' opacity='.35'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Вход -->
+<section id="login" class="screen hidden">
+  <div class="login-card">
+    <div class="brand big"><span class="mark"></span><span>Мостик</span></div>
+    <p class="tagline">Все приборы Айсберг 8 в одном месте</p>
+
+    <form id="loginForm">
+      <label>Почта<input type="email" id="lEmail" autocomplete="username" required></label>
+      <label>Пароль<input type="password" id="lPass" autocomplete="current-password" required></label>
+      <button type="submit" class="btn primary wide">Войти</button>
+      <p class="err" id="lErr"></p>
+    </form>
+
+    <form id="bootForm" class="hidden">
+      <p class="hint">Первый запуск: создание учётной записи владельца по одноразовому коду.</p>
+      <label>Код запуска<input id="bCode" required autocomplete="off"></label>
+      <label>ФИО<input id="bName" required value="Кондратьев Сергей Алексеевич"></label>
+      <label>Почта<input type="email" id="bEmail" required autocomplete="username"></label>
+      <label>Пароль (от 10 символов, буквы и цифры)<input type="password" id="bPass" required autocomplete="new-password"></label>
+      <button type="submit" class="btn primary wide">Создать и войти</button>
+      <p class="err" id="bErr"></p>
+    </form>
+    <a href="#" id="bootLink" class="muted-link">Первый запуск</a>
+  </div>
+</section>
+
+<!-- Приложение -->
+<section id="app" class="screen hidden">
+  <header class="top">
+    <div class="brand"><span class="mark"></span><span>Мостик</span></div>
+    <nav id="tabs"></nav>
+    <div class="user">
+      <button class="btn ghost" id="userBtn"></button>
+      <div class="menu hidden" id="userMenu">
+        <button id="pwBtn">Сменить пароль</button>
+        <button id="logoutBtn">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar" id="toolbar">
+    <div class="periods" id="periods"></div>
+    <div class="custom hidden" id="customRange">
+      <input type="date" id="dFrom"> – <input type="date" id="dTo">
+      <button class="btn small" id="applyRange">Показать</button>
+    </div>
+    <div class="fresh" id="fresh"></div>
+  </div>
+  <div class="chips" id="chips"></div>
+
+  <main id="view"></main>
+</section>
+
+<!-- Модальное окно -->
+<div class="modal hidden" id="modal"><div class="modal-card" id="modalCard"></div></div>
+<div class="toast hidden" id="toast"></div>
+<div class="loader hidden" id="loader"><div class="spin"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
