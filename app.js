@@ -147,6 +147,8 @@ $("pwBtn").onclick = () => {
 /* ---------- вкладки ---------- */
 /* Новинки RND видят админы, РОП (в пределах своих ответственных) и маркетинг; маржа – только владельцу */
 const canRnd = () => S.me.role === "admin" || S.me.role === "rop" || S.me.only_rnd;
+/* Доли продаж по категориям (только проценты) – маркетологу */
+const canShare = () => S.me.role === "marketing";
 function tabList() {
   if (S.me.only_rnd) return [["rnd", "Новинки RND"], ["overview", "Продажи по дням"]];
   const t = [];
@@ -166,12 +168,18 @@ function renderTabs() {
   const dashUser = !!S.me.dash;
   $("dashBtn").classList.toggle("hidden", !dashUser || S.tab === "dash");
   $("adminBtn").classList.toggle("hidden", !(dashUser && S.me.role === "admin") || S.tab === "admin");
-  const dashTabs = dashUser && canRnd() ? [["dash", S.me.role === "admin" ? "Дашборд компании" : "Дашборд"], ["rnd", "Новинки RND"]] : [];
+  const dashName = S.me.role === "admin" ? "Дашборд компании" : S.me.role === "marketing" ? "Маркетинг" : "Дашборд";
+  const dashTabs = [];
+  if (dashUser && (canRnd() || canShare())) {
+    dashTabs.push(["dash", dashName]);
+    if (canRnd()) dashTabs.push(["rnd", "Новинки RND"]);
+    if (canShare()) dashTabs.push(["share", "Продажи по категориям"]);
+  }
   $("tabs").classList.toggle("hidden", dashUser && !dashTabs.length);
-  if (dashUser) { const t = S.tab; if (t !== "dash" && t !== "admin" && !(t === "rnd" && canRnd())) S.tab = "dash"; }
+  if (dashUser) { const t = S.tab; if (!dashTabs.some(([k]) => k === t) && t !== "dash" && t !== "admin") S.tab = "dash"; }
   $("tabs").innerHTML = (dashUser ? dashTabs : tabList()).map(([k, n]) => `<button data-tab="${k}" class="${S.tab === k ? "on" : ""}">${n}</button>`).join("");
   $("tabs").querySelectorAll("button").forEach((b) => (b.onclick = () => { S.tab = b.dataset.tab; renderTabs(); render(); }));
-  const dataTab = S.tab !== "admin" && S.tab !== "dash" && S.tab !== "rnd";
+  const dataTab = !["admin", "dash", "rnd", "share"].includes(S.tab);
   document.body.classList.toggle("dash-mode", S.tab === "dash");
   $("toolbar").classList.toggle("hidden", !dataTab);
   $("chips").classList.toggle("hidden", !dataTab);
@@ -307,6 +315,7 @@ function render() {
   if (S.tab === "admin") return renderAdmin();
   if (S.tab === "dash") return renderDash();
   if (S.tab === "rnd") return renderRnd();
+  if (S.tab === "share") return renderShare();
   if (S.tab === "overview") return renderOverview();
   return renderDim(S.tab);
 }
@@ -599,6 +608,62 @@ function rndDetail(title) {
     data: { labels: months.map(([m]) => monthName(m)), datasets: [{ label: "Выручка", data: months.map(([, v]) => v.rev), backgroundColor: months.map(([m]) => (m === curMonth() ? "#99BCDF" : "#3278BE")), borderRadius: 0 }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => rub(c.raw) } } },
       scales: { y: { ticks: { callback: (v) => money(v) }, grid: { color: "#CCDDEF" } }, x: { grid: { display: false } } } },
+  }));
+}
+
+/* ---------- Продажи по категориям в процентах (маркетолог): рублей нет даже в ответе сервера ---------- */
+const SHARE = { preset: "lastmonth", data: null, open: new Set() };
+const SHARE_PRESETS = [["month", "Этот месяц"], ["lastmonth", "Прошлый месяц"], ["quarter", "Квартал"], ["ytd", "С начала года"], ["y12", "12 месяцев"]];
+function sharePeriod(p) {
+  const t = new Date(); let f, to = t;
+  if (p === "month") f = new Date(t.getFullYear(), t.getMonth(), 1);
+  if (p === "lastmonth") { f = new Date(t.getFullYear(), t.getMonth() - 1, 1); to = new Date(t.getFullYear(), t.getMonth(), 0); }
+  if (p === "quarter") f = new Date(t.getFullYear(), Math.floor(t.getMonth() / 3) * 3, 1);
+  if (p === "ytd") f = new Date(t.getFullYear(), 0, 1);
+  if (p === "y12") f = new Date(t.getFullYear() - 1, t.getMonth() + 1, 1);
+  return [iso(f), iso(to)];
+}
+const pp = (v) => (v == null ? "–" : (v > 0 ? "+" : "") + nf1.format(v) + "%");
+const ppCls = (v) => (v == null ? "" : v >= 0 ? "up" : "down");
+async function renderShare() {
+  if (!SHARE.data) {
+    $("view").innerHTML = `<div class="empty">Считаю доли продаж…</div>`;
+    const [f, t] = sharePeriod(SHARE.preset);
+    const { data, error } = await sb.rpc("most_share", { p_from: f, p_to: t });
+    if (error) { $("view").innerHTML = `<div class="card empty">${esc(error.message)}</div>`; return; }
+    SHARE.data = data;
+  }
+  if (S.tab !== "share") return;
+  const d = SHARE.data;
+  const cats = d.cats || [];
+  $("view").innerHTML = `
+    <div class="section-title"><h2>Продажи по категориям</h2><span class="note">${ruDate(d.from)} – ${ruDate(d.to)}, сравнение с ${ruDate(d.prev_from)} – ${ruDate(d.prev_to)}</span></div>
+    <div class="periods" style="margin-bottom:14px">${SHARE_PRESETS.map(([k, n]) => `<button data-sp="${k}" class="${SHARE.preset === k ? "on" : ""}">${n}</button>`).join("")}</div>
+    <div class="grid kpis">
+      <div class="card kpi"><div class="l">Продажи компании</div><div class="v ${ppCls(d.growth)}">${pp(d.growth)}</div><div class="d">к предыдущему такому же периоду</div></div>
+      <div class="card kpi"><div class="l">Категорий с продажами</div><div class="v">${cats.filter((c) => c.share > 0).length}</div><div class="d">нажмите на категорию – вся номенклатура</div></div>
+    </div>
+    <div class="card tbl-wrap" style="margin-top:16px"><table><thead><tr>
+      <th>Категория / позиция</th><th class="num">Доля продаж</th><th class="num">Была</th><th class="num">Изменение доли</th><th class="num">Рост продаж</th><th class="num">Клиентов</th></tr></thead><tbody>
+      ${cats.map((c, i) => {
+        const dsh = c.share != null && c.share_prev != null ? c.share - c.share_prev : null;
+        const open = SHARE.open.has(c.cat);
+        const row = `<tr class="click" data-i="${i}"><td><b>${open ? "▾" : "▸"} ${esc(c.cat)}</b><div class="bar" style="width:${Math.max(1, Math.min(100, (c.share || 0) * 2))}%"></div></td>
+          <td class="num"><b>${c.share == null ? "–" : nf1.format(c.share) + "%"}</b></td><td class="num">${c.share_prev == null ? "–" : nf1.format(c.share_prev) + "%"}</td>
+          <td class="num ${ppCls(dsh)}">${dsh == null ? "–" : (dsh > 0 ? "+" : "") + nf1.format(dsh) + " п.п."}</td>
+          <td class="num ${ppCls(c.growth)}">${c.growth == null ? (c.share > 0 ? `<span class="up">новая</span>` : "–") : pp(c.growth)}</td><td class="num">${c.clients ?? "–"}</td></tr>`;
+        if (!open) return row;
+        const items = (c.items || []).map((p) => `<tr><td style="padding-left:28px">${esc(p.prod)}${p.new ? ` <span class="tag">новинка периода</span>` : ""}${p.gone ? ` <span class="tag off">нет продаж</span>` : ""}</td>
+          <td class="num">${p.share_cat == null ? "–" : nf1.format(p.share_cat) + "%"} <span class="hint">в категории</span></td>
+          <td class="num">${p.share_all == null ? "–" : nf1.format(p.share_all) + "%"} <span class="hint">от всех</span></td><td></td>
+          <td class="num ${ppCls(p.growth)}">${p.growth == null ? "–" : pp(p.growth)}</td><td class="num">${p.clients ?? "–"}</td></tr>`).join("");
+        return row + items;
+      }).join("")}
+    </tbody></table></div>
+    <p class="hint">Все показатели в процентах от выручки. «Доля продаж» – доля категории в продажах компании за период; «Была» – за предыдущий такой же период. Внутри категории – каждая позиция: доля в категории и в продажах компании, рост к прошлому периоду. Внутригрупповые продажи не учитываются.</p>`;
+  $("view").querySelectorAll("[data-sp]").forEach((b) => (b.onclick = () => { SHARE.preset = b.dataset.sp; SHARE.data = null; renderShare(); }));
+  $("view").querySelectorAll("tr.click[data-i]").forEach((tr) => (tr.onclick = () => {
+    const c = cats[+tr.dataset.i].cat; SHARE.open.has(c) ? SHARE.open.delete(c) : SHARE.open.add(c); renderShare();
   }));
 }
 
